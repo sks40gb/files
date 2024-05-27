@@ -105,7 +105,7 @@ for i in "${arrProvidersMatch[@]}"; do
   if [[ $LOCK_PROVIDER == *"|$i|"* ]] || [[ $LOCK_DELTA == *"|$i|"* ]]; then
     if [[ $STATUS == "LOCK" ]]; then
 
-      echo "#########################tarting LOCK [ $i ] snapshot "
+      echo "#########################starting LOCK [ $i ] snapshot "
 
       if [[ $INSTRUMENTS_MATCH =~ "OPTION" ]]; then
         echo "LOCK $OPTION_DATE option snapshot : check if is not LOCK yet and delete _UNLOCK_STATIC and create _LOCK_STATIC"

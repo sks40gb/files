@@ -11,7 +11,7 @@ fi
 PROVIDER=$1
 PROVIDERS_MATCH=$2
 INSTRUMENTS_MATCH=$3
-RUN_MODE_=$4
+RUN_MODE=$4
 LOCK_PROVIDER=$5
 LOCK_INSTRUMENT=$6
 LOCK_DELTA=$7
@@ -37,8 +37,8 @@ arrInstrumentsMatch=($INSTRUMENTS_MATCH)
 unset IFS
 
 #OPTION/FUTURE snapshots paths
-OPT_SNAP_PATH=@LAKE_STORAGE_URL@/glx/referential/listed_derivates_cross_ref/prx_format/option/option_snapshot_flag
-FUT_SNAP_PATH=@LAKE_STORAGE_URL@/glx/referential/listed_derivates_cross_ref/prx_format/future/future_snapshot_flag
+OPT_SNAP_PATH=@LAKE_STORAGE_URL@/glx/referential/listed_derivates_cross_ref/prk_format/option/option_snapshot_flag
+FUT_SNAP_PATH=@LAKE_STORAGE_URL@/glx/referential/listed_derivates_cross_ref/prk_format/future/future_snapshot_flag
 
 #LOCK / UNLOCK in fedding module
 for i in "${arrProvider[@]}"; do
@@ -46,10 +46,10 @@ for i in "${arrProvider[@]}"; do
 
     if [[ $STATUS == "LOCK" ]]; then
 
-      echo "####################### Starting LOCK [ $i ] snapshot "
+      echo "######################## Starting LOCK [ $i ] snapshot "
 
       if [[ $i == "LD_OPTION" ]] || [[ $i == "ALL" ]]; then
-        echo "LOCK $OPTION_DATE option snapshot : delete _UNLOCK_STATIC and create _LOCK_static and _UNLOCK_STATIC"
+        echo "LOCK $OPTION_DATE option snapshot : delete _UNLOCK_STATIC and create _LOCK_STATIC and _UNLOCK_STATIC"
 
         hadoop fs -rm -f $OPT_SNAP_PATH/_UNLOCK_STATIC
         hadoop fs -touchz $OPT_SNAP_PATH/_LOCK_STATIC
@@ -81,7 +81,7 @@ for i in "${arrProvider[@]}"; do
 
         hadoop fs -rm -f $OPT_SNAP_PATH/_LOCK_STATIC
         hadoop fs - touchz $OPT_SNAP_PATH/_UNLOCK_STATIC
-        if [ "$?" -n "0" ]; then
+        if [ "$?" -ne "0" ]; then
           exit -1
         fi
       fi
@@ -98,17 +98,17 @@ for i in "${arrProvider[@]}"; do
   fi
 done
 
-#LOCK / UNLOCK in updating module and delta processing
+#LOCK / UNLOCK in updating module and deltas processing
 
 for i in "${arrProvidersMatch[@]}"; do
 
   if [[ $LOCK_PROVIDER == *"|$i|"* ]] || [[ $LOCK_DELTA == *"|$i|"* ]]; then
     if [[ $STATUS == "LOCK" ]]; then
 
-      echo "#####################################Starting LOCK [ $i ] snapshot "
+      echo "##################################################Starting LOCK [ $i ] snapshot "
 
       if [[ $INSTRUMENTS_MATCH =~ "OPTION" ]]; then
-        echo "LOCK $OPTION_DATE option snapshot : check if it not LOCK yet and delete _UNLOCK_STATIC and create _LOCK_STATIC"
+        echo "LOCK $OPTION_DATE option snapshot : check if is not LOCK yet and delete _UNLOCK_STATIC and create _LOCK_STATIC"
 
         if [[ $LOCK_PROVIDER == *"|$i|"* ]]; then
           hadoop fs -rm -f $OPT_SNAP_PATH/_UNLOCK_STATIC
@@ -137,7 +137,7 @@ for i in "${arrProvidersMatch[@]}"; do
 
     elif [[ $STATUS == "UNLOCK" ]]; then
 
-      echo "########################## Starting UNLOCK [ $i ] snapshot "
+      echo "############################ Starting UNLOCK [ $i ] snapshot "
 
       if [[ $INSTRUMENTS_MATCH =~ "OPTION" ]]; then
         echo "UNLOCK $OPTION_DATE option snapshot : create _UNLOCK_STATIC and delete _LOCK_STATIC"
@@ -148,11 +148,11 @@ for i in "${arrProvidersMatch[@]}"; do
           if [ "$?" -ne "0" ]; then
             exit -1
           fi
-        elif [[ $LOCK_DELTA = *"|$i|"* ]]; then
-          echo "$i" hadoop fs -appendToFile - $OP_SNAP_PATH/_DELTA_END_STATUS
+        elif [[ $LOCK_DELTA == *"|$i|"* ]]; then
+          echo "$i" | hadoop fs -appendToFile - $OPT_SNAP_PATH/_DELTA_END_STATUS
 
-          deltaStartStatus=$(hadoop fs -cat $OP_SNAP_PATH/_DELTA_START_STATUS | sort)
-          deltaEndStatus=$(hadoop fs -cat $OP_SNAP_PATH/_DELTA_END_STATUS | sort)
+          deltaStartStatus=$(hadoop fs -cat $OPT_SNAP_PATH/_DELTA_START_STATUS | sort)
+          deltaEndStatus=$(hadoop fs -cat $OPT_SNAP_PATH/_DELTA_END_STATUS | sort)
 
           if [[ ${deltaStartStatus//[[:blank:]$'\t\r\n']} = ${deltaEndStatus//[[:blank:]$'\t\r\n']} ]]; then
             hadoop fs -rm -f $OPT_SNAP_PATH/_LOCK_DELTA

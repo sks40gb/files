@@ -7,6 +7,16 @@ import java.net.URI;
 import java.util.Arrays;
 import java.util.List;
 
+/*
+
+Explanation
+Hadoop Configuration: We initialize the Hadoop configuration and get a FileSystem instance to interact with HDFS.
+File Operations: Instead of using shell commands, we use Hadoop's Java API (FileSystem class) to perform operations like creating, deleting, and appending to files.
+Custom Methods: Methods like deleteFileIfExists, createFile, appendToFile, and readAndSortFile encapsulate file operations using Hadoop's API.
+Keytab File Handling: The keytab file is copied from HDFS to the local file system using FileSystem.copyToLocalFile.
+This code ensures that we interact with HDFS directly through the Hadoop API, which is a more robust and scalable approach compared to executing shell commands.
+*/
+
 public class 001_V1 {
 
     public static void main(String[] args) throws IOException {
@@ -175,3 +185,4 @@ public class 001_V1 {
                 .reduce((s1, s2) -> s1 + "\n" + s2)
                 .orElse("");
     }
+}

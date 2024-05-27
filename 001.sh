@@ -105,7 +105,7 @@ for i in "${arrProvidersMatch[@]}"; do
   if [[ $LOCK_PROVIDER == *"|$i|"* ]] || [[ $LOCK_DELTA == *"|$i|"* ]]; then
     if [[ $STATUS == "LOCK" ]]; then
 
-      echo "##################################################Starting LOCK [ $i ] snapshot "
+      echo "#########################tarting LOCK [ $i ] snapshot "
 
       if [[ $INSTRUMENTS_MATCH =~ "OPTION" ]]; then
         echo "LOCK $OPTION_DATE option snapshot : check if is not LOCK yet and delete _UNLOCK_STATIC and create _LOCK_STATIC"
@@ -116,7 +116,7 @@ for i in "${arrProvidersMatch[@]}"; do
           if [ "$?" -ne "0" ]; then
             exit -1
           fi
-        elif [[ $LOCK_DELTA = *"|$i|"* ]]; then
+        elif [[ $LOCK_DELTA == *"|$i|"* ]]; then
           hadoop fs -rm -f $OPT_SNAP_PATH/_UNLOCK_DELTA
           hadoop fs -touchz $OPT_SNAP_PATH/_LOCK_DELTA
           echo "$i" | hadoop fs -appendToFile - $OPT_SNAP_PATH/_DELTA_START_STATUS
@@ -137,7 +137,7 @@ for i in "${arrProvidersMatch[@]}"; do
 
     elif [[ $STATUS == "UNLOCK" ]]; then
 
-      echo "############################ Starting UNLOCK [ $i ] snapshot "
+      echo "######################## Starting UNLOCK [ $i ] snapshot "
 
       if [[ $INSTRUMENTS_MATCH =~ "OPTION" ]]; then
         echo "UNLOCK $OPTION_DATE option snapshot : create _UNLOCK_STATIC and delete _LOCK_STATIC"

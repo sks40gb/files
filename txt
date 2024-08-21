@@ -1,0 +1,13 @@
+Steps to Manage Delta Lake History
+
+
+Set Retention Duration:
+--------------------------------
+spark.conf.set("spark.databricks.delta.retentionDurationCheck.enabled", "false")
+spark.conf.set("spark.databricks.delta.logRetentionDuration", "interval 1 days")
+spark.conf.set("spark.databricks.delta.deletedFileRetentionDuration", "interval 1 days")
+
+
+Disabling Retention Duration Check:
+-----------------------------
+spark.conf.set("spark.databricks.delta.retentionDurationCheck.enabled", "false")

@@ -1,0 +1,58 @@
+public void m1(List<String> upsertColumns, Dataset<Row> deltaTable, Dataset<Row> deltaUpdates, Column joinCondition) {
+    String baseDatasetPrefix = "baseDatasetPrefix";
+    String updates = "updates";
+
+    // Join deltaTable and deltaUpdates to identify matched and unmatched rows
+    Dataset<Row> joined = deltaTable.as(baseDatasetPrefix)
+                                    .join(deltaUpdates.as(updates), joinCondition, "outer");
+
+    // Separate matched rows for update
+    Dataset<Row> matchedRows = joined.filter(updates + ".id is not null and " + baseDatasetPrefix + ".id is not null");
+    
+    // Separate unmatched rows from deltaUpdates for insert
+    Dataset<Row> unmatchedUpdates = joined.filter(baseDatasetPrefix + ".id is null");
+
+    // Update matched rows (simulate update by selecting the columns from updates)
+    Dataset<Row> updatedTable = deltaTable.join(matchedRows.selectExpr(upsertColumns.toArray(new String[0])), joinCondition, "left_semi");
+
+    // Insert unmatched rows
+    Dataset<Row> finalTable = updatedTable.union(unmatchedUpdates);
+
+    // Replace the original deltaTable with the final updated table
+    deltaTable = finalTable;
+}
+
+
+
+--------------------------------
+
+public void m1(List<String> upsertColumns, Dataset<Row> deltaTable, Dataset<Row> deltaUpdates, Column joinCondition) {
+    String baseDatasetPrefix = "baseDatasetPrefix";
+    String updates = "updates";
+
+    // Join deltaTable and deltaUpdates to identify matched and unmatched rows
+    Dataset<Row> joined = deltaTable.as(baseDatasetPrefix)
+                                    .join(deltaUpdates.as(updates), joinCondition, "outer");
+
+    // Separate matched rows (these are the ones we need to update)
+    Dataset<Row> matchedRows = joined.filter(
+        updates + ".id is not null and " + baseDatasetPrefix + ".id is not null");
+
+    // Update matched rows by selecting columns from updates
+    for (String column : upsertColumns) {
+        matchedRows = matchedRows.withColumn(
+            column, functions.coalesce(matchedRows.col(updates + "." + column), matchedRows.col(baseDatasetPrefix + "." + column)));
+    }
+
+    Dataset<Row> updatedTable = deltaTable.join(matchedRows.selectExpr(baseDatasetPrefix + ".*"), joinCondition, "left_semi");
+
+    // Separate unmatched rows (these are the ones we need to insert)
+    Dataset<Row> unmatchedUpdates = joined.filter(
+        baseDatasetPrefix + ".id is null").selectExpr(upsertColumns.stream().map(col -> updates + "." + col).toArray(String[]::new));
+
+    // Combine the updated rows with the unmatched rows
+    Dataset<Row> finalTable = updatedTable.union(unmatchedUpdates);
+
+    // Replace the original deltaTable with the final updated table
+    deltaTable = finalTable;
+}

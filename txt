@@ -51,4 +51,21 @@ public class ReadDeltaTableWithMultiplePartitionFilters {
 
         return partitions;
     }
+
+    // Method to extract the base path (without partitions)
+    public static String extractBasePath(String deltaTablePath) {
+        StringBuilder basePath = new StringBuilder();
+        String[] pathParts = deltaTablePath.split("/");
+
+        for (String part : pathParts) {
+            if (!part.contains("=")) {
+                // Add only non-partition parts of the path
+                basePath.append(part).append("/");
+            } else {
+                break;  // Stop when partition part is encountered
+            }
+        }
+
+        return basePath.toString();
+    }
 }

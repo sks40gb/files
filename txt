@@ -1,135 +1,54 @@
+import io.delta.tables.DeltaTable;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
+import org.apache.spark.sql.SparkSession;
 
-{
-    "editor.suggestSelection": "first",
-    "vsintellicode.modify.editor.suggestSelection": "automaticallyOverrodeDefaultValue",
-    "material-icon-theme.folders.theme": "specific",
-    "files.exclude": {
-        "**/.classpath": true,
-        "**/.project": true,
-        "**/.settings": true,
-        "**/.factorypath": true
-    },
-    "editor.formatOnType": true,
-    "editor.fontSize": 13.5,
-    "editor.fontWeight": "normal",
-    "editor.lineHeight": 1.5,
-    "workbench.preferredLightColorTheme": "Default Dark+",
-    "workbench.preferredHighContrastColorTheme": "Default Light+",
-    "workbench.preferredDarkColorTheme": "Default Light+",
-    "workbench.colorCustomizations": {
-        "[Default Dark+]": {}
-    },
-    "editor.tokenColorCustomizations": {
-        "[Default Light+]": {
-            // "types": "#1fa8d8",
-            // "strings": "#29a792",
-            "keywords": "#c44e9e",
-            "comments": "#818e96",
-            // "functions": "#dba400",
-            "variables": "#353131",
-            "numbers": "#26c941",
-            "textMateRules": [
-                {
-                    "scope": "keyword.other.import.java",
-                    "settings": {
-                        "foreground": "#2899b6"
-                    }
-                },
-                    {
-                        "scope": "entity.name.tag",
-                        "settings": {
-                            "foreground": "#2899b6"
-                        }
-                    },
-                {
-                    "scope": "constant.language",
-                    "settings": {
-                        "foreground": "#287db6"
-                    }
-                },
-                {
-                    "scope": "keyword.operator",
-                    "settings": {
-                        // "foreground": "#07fc3c"
-                    }
-                },
-                {
-                    "scope": "keyword.var",
-                    "settings": {
-                        "foreground": "#35daf7",
-                        "fontStyle": "bold"
-                    }
-                },
-                {
-                    "scope": [
-                        "storage.modifier",
-                        "keyword.operator.noexcept"
-                    ],
-                    "settings": {
-                        "foreground": "#3da6ec"
-                    }
-                },
-                {
-                    "scope": "storage.type",
-                    "settings": {
-                        "foreground": "#daff07"
-                    }
-                },
-                {
-                    "scope": "storage",
-                    "settings": {
-                        // "foreground": "#56d65c"
-                    }
-                },
-                {
-                    "scope": [
-                        "meta.return-type",
-                        "support.class",
-                        "support.type",
-                        "entity.name.type",
-                        "entity.name.namespace",
-                        "entity.other.attribute",
-                        "entity.name.scope-resolution",
-                        "entity.name.class",
-                        "storage.type.numeric.go",
-                        "storage.type.byte.go",
-                        "storage.type.boolean.go",
-                        "storage.type.string.go",
-                        "storage.type.uintptr.go",
-                        "storage.type.error.go",
-                        "storage.type.rune.go",
-                        "storage.type.cs",
-                        "storage.type.generic.cs",
-                        "storage.type.modifier.cs",
-                        "storage.type.variable.cs",
-                        "storage.type.annotation.java",
-                        "storage.type.generic.java",
-                        "storage.type.java",
-                        "storage.type.object.array.java",
-                        "storage.type.primitive.array.java",
-                        "storage.type.primitive.java",
-                        "storage.type.token.java",
-                        "storage.type.groovy",
-                        "storage.type.annotation.groovy",
-                        "storage.type.parameters.groovy",
-                        "storage.type.generic.groovy",
-                        "storage.type.object.array.groovy",
-                        "storage.type.primitive.array.groovy",
-                        "storage.type.primitive.groovy"
-                    ],
-                    "settings": {
-                        // "foreground": "#64f520"
-                    }
-                }
-            ]
+import java.util.HashMap;
+import java.util.Map;
+
+public class ReadDeltaTableWithMultiplePartitionFilters {
+    public static void main(String[] args) {
+        // Initialize Spark session
+        SparkSession spark = SparkSession.builder()
+                .appName("ReadDeltaTableWithMultiplePartitionFilters")
+                .master("local") // Use "local" for local testing
+                .getOrCreate();
+
+        // Sample Delta table path with multiple partition information
+        String deltaTablePath = "/path/to/delta-table/year=2023/month=01/day=15/region=US/";
+
+        // Extract partition key-value pairs from the path
+        Map<String, String> partitions = extractPartitions(deltaTablePath);
+
+        // Load the Delta table (base path without partition values)
+        String basePath = "/path/to/delta-table/";
+        DeltaTable deltaTable = DeltaTable.forPath(spark, basePath);
+
+        // Build filters dynamically from partition values
+        Dataset<Row> partitionedData = deltaTable.toDF();
+        for (Map.Entry<String, String> entry : partitions.entrySet()) {
+            partitionedData = partitionedData.filter(entry.getKey() + " = " + entry.getValue());
         }
-    },
-    "material-icon-theme.folders.color": "#ef5350",
-    "redhat.telemetry.enabled": true,
-    "workbench.editor.untitled.hint": "hidden",
-    "thunder-client.codeSnippetLanguage": "cs-httpclient",
-    "editor.formatOnPaste": true,
-    "microprofile.alwaysShowOverview": false,
-    "workbench.colorTheme": "Default Light+",
-    //"editor.lineHeight": 1
+
+        // Show the filtered data
+        partitionedData.show();
+
+        // Stop Spark session
+        spark.stop();
+    }
+
+    // Method to extract partition key-value pairs from the path
+    public static Map<String, String> extractPartitions(String deltaTablePath) {
+        Map<String, String> partitions = new HashMap<>();
+        String[] pathParts = deltaTablePath.split("/");
+
+        for (String part : pathParts) {
+            if (part.contains("=")) {
+                String[] partitionKeyValue = part.split("=");
+                partitions.put(partitionKeyValue[0], partitionKeyValue[1]);  // Store partition key and value
+            }
+        }
+
+        return partitions;
+    }
 }

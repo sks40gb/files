@@ -77,3 +77,66 @@ public class ReadDeltaTableWithBasePath {
         return value;  // For numeric partition values, return as-is
     }
 }
+
+import io.delta.tables.DeltaTable;
+import org.apache.spark.sql.SparkSession;
+import java.nio.file.Paths;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import java.util.Arrays;
+
+public class ConvertParquetToDeltaWithPartitionsFromPath {
+    public static void main(String[] args) {
+        // Initialize Spark session with Delta Lake support
+        SparkSession spark = SparkSession.builder()
+                .appName("ConvertParquetToDeltaWithPartitionsFromPath")
+                .master("local")
+                .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
+                .config("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog")
+                .getOrCreate();
+
+        // Path to the partitioned Parquet table
+        String parquetTablePath = "/path/to/partitioned-parquet-table";
+
+        // Step 1: Extract partition columns dynamically from the directory structure
+        String partitionSchema = extractPartitionSchemaFromPath(parquetTablePath);
+
+        // Step 2: Convert the Parquet table to a Delta table
+        if (!partitionSchema.isEmpty()) {
+            DeltaTable.convertToDelta(spark, "parquet.`" + parquetTablePath + "`", partitionSchema);
+        } else {
+            // If no partition columns, proceed without a partition schema
+            DeltaTable.convertToDelta(spark, "parquet.`" + parquetTablePath + "`");
+        }
+
+        // Step 3: Verify the Delta table conversion (optional)
+        DeltaTable deltaTable = DeltaTable.forPath(spark, parquetTablePath);
+        deltaTable.toDF().show();  // Display the contents of the newly converted Delta table
+
+        // Stop Spark session
+        spark.stop();
+    }
+
+    // Helper method to extract partition columns from path
+    private static String extractPartitionSchemaFromPath(String parquetTablePath) {
+        // Example: /path/to/delta-table/year=2023/month=01/
+        // Regex pattern to detect partition folders (e.g., year=2023)
+        Pattern partitionPattern = Pattern.compile("([^/]+)=([^/]+)");
+
+        // Get the partitions from the folder structure
+        return Arrays.stream(Paths.get(parquetTablePath).toFile().listFiles())
+                .filter(file -> file.isDirectory())
+                .map(file -> {
+                    String folderName = file.getName();
+                    if (partitionPattern.matcher(folderName).find()) {
+                        String[] parts = folderName.split("=");
+                        return parts[0] + " STRING";  // Assuming all partitions are STRING type for simplicity
+                    }
+                    return "";
+                })
+                .filter(partition -> !partition.isEmpty())
+                .collect(Collectors.joining(", "));
+    }
+}
+
+

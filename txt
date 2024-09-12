@@ -6,28 +6,28 @@ import org.apache.spark.sql.SparkSession;
 import java.util.HashMap;
 import java.util.Map;
 
-public class ReadDeltaTableWithMultiplePartitionFilters {
+public class ReadDeltaTableWithBasePath {
     public static void main(String[] args) {
         // Initialize Spark session
         SparkSession spark = SparkSession.builder()
-                .appName("ReadDeltaTableWithMultiplePartitionFilters")
+                .appName("ReadDeltaTableWithBasePath")
                 .master("local") // Use "local" for local testing
                 .getOrCreate();
 
         // Sample Delta table path with multiple partition information
         String deltaTablePath = "/path/to/delta-table/year=2023/month=01/day=15/region=US/";
 
-        // Extract partition key-value pairs from the path
+        // Extract partition key-value pairs and the base path
+        String basePath = extractBasePath(deltaTablePath);
         Map<String, String> partitions = extractPartitions(deltaTablePath);
 
-        // Load the Delta table (base path without partition values)
-        String basePath = "/path/to/delta-table/";
+        // Load the Delta table using the base path (without partition values)
         DeltaTable deltaTable = DeltaTable.forPath(spark, basePath);
 
-        // Build filters dynamically from partition values
+        // Apply partition filters dynamically
         Dataset<Row> partitionedData = deltaTable.toDF();
         for (Map.Entry<String, String> entry : partitions.entrySet()) {
-            partitionedData = partitionedData.filter(entry.getKey() + " = " + entry.getValue());
+            partitionedData = partitionedData.filter(entry.getKey() + " = " + formatFilterValue(entry.getKey(), entry.getValue()));
         }
 
         // Show the filtered data
@@ -35,21 +35,6 @@ public class ReadDeltaTableWithMultiplePartitionFilters {
 
         // Stop Spark session
         spark.stop();
-    }
-
-    // Method to extract partition key-value pairs from the path
-    public static Map<String, String> extractPartitions(String deltaTablePath) {
-        Map<String, String> partitions = new HashMap<>();
-        String[] pathParts = deltaTablePath.split("/");
-
-        for (String part : pathParts) {
-            if (part.contains("=")) {
-                String[] partitionKeyValue = part.split("=");
-                partitions.put(partitionKeyValue[0], partitionKeyValue[1]);  // Store partition key and value
-            }
-        }
-
-        return partitions;
     }
 
     // Method to extract the base path (without partitions)
@@ -67,5 +52,28 @@ public class ReadDeltaTableWithMultiplePartitionFilters {
         }
 
         return basePath.toString();
+    }
+
+    // Method to extract partition key-value pairs from the path
+    public static Map<String, String> extractPartitions(String deltaTablePath) {
+        Map<String, String> partitions = new HashMap<>();
+        String[] pathParts = deltaTablePath.split("/");
+
+        for (String part : pathParts) {
+            if (part.contains("=")) {
+                String[] partitionKeyValue = part.split("=");
+                partitions.put(partitionKeyValue[0], partitionKeyValue[1]);  // Store partition key and value
+            }
+        }
+
+        return partitions;
+    }
+
+    // Method to format filter values for strings (e.g., region = 'US')
+    public static String formatFilterValue(String key, String value) {
+        if (key.equals("region")) {  // Example for handling string-based partitions
+            return "'" + value + "'";  // Add quotes around string partition values
+        }
+        return value;  // For numeric partition values, return as-is
     }
 }
